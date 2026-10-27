@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a237e'/><text x='50' y='68' font-family='Arial Black,sans-serif' font-size='52' font-weight='900' fill='white' text-anchor='middle'>NP</text></svg>">
+<title>NaviDept ProStock Care</title>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Work+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- ✅ SUPABASE CLIENT -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Work Sans',sans-serif;background:#f0f2f5;color:#333;min-height:100vh}
+h1,h2,h3,h4{font-family:'Righteous',cursive}
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1a237e,#283593)}
+.login-box{background:#fff;border-radius:16px;padding:40px;width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.login-box h1{color:#1a237e;margin-bottom:4px;font-size:1.5rem}
+.login-box h2{color:#1a237e;margin-bottom:4px;font-size:1.1rem;font-family:'Righteous',cursive}
+.login-box p{color:#666;margin-bottom:24px;font-size:.82rem}
+.login-box input{width:100%;padding:12px 16px;margin-bottom:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:1rem;font-family:inherit}
+.login-box input:focus{border-color:#1a237e;outline:none}
+.login-box button{width:100%;padding:12px;background:#1a237e;color:#fff;border:none;border-radius:8px;font-size:1.1rem;font-family:'Righteous',cursive;cursor:pointer}
+.login-box button:hover{background:#283593}
+/* LOADING */
+#loadingScreen{display:none;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1a237e,#283593);color:#fff;flex-direction:column;gap:16px}
+#loadingScreen .spinner{width:48px;height:48px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* APP */
+#app{display:none}
+header{padding:16px 24px;color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+header h1{font-size:1.3rem}
+header .info{font-size:.85rem;opacity:.9}
+header button{background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);padding:6px 16px;border-radius:6px;cursor:pointer;font-family:inherit}
+header button:hover{background:rgba(255,255,255,.3)}
+.owner header{background:linear-gradient(135deg,#1a237e,#283593)}
+.produksi header{background:linear-gradient(135deg,#1a5f4a,#2e7d62)}
+.packing header{background:linear-gradient(135deg,#e65100,#f57c00)}
+.paket header{background:linear-gradient(135deg,#6a1b9a,#8e24aa)}
+/* SYNC STATUS */
+#syncStatus{font-size:.72rem;padding:3px 10px;border-radius:10px;background:rgba(255,255,255,.2);white-space:nowrap}
+#syncStatus.online{background:#2e7d32}
+#syncStatus.offline{background:#c62828}
+#syncStatus.syncing{background:#f57f17}
+/* TABS */
+nav{display:flex;gap:4px;padding:12px 16px;background:#fff;border-bottom:2px solid #e0e0e0;overflow-x:auto;flex-wrap:wrap}
+nav button{padding:8px 16px;border:none;background:#f0f2f5;border-radius:8px 8px 0 0;cursor:pointer;font-family:inherit;font-weight:600;font-size:.85rem;white-space:nowrap}
+nav button.active{color:#fff}
+.owner nav button.active{background:#1a237e}
+.produksi nav button.active{background:#1a5f4a}
+.packing nav button.active{background:#e65100}
+.paket nav button.active{background:#6a1b9a}
+/* CONTENT */
+main{padding:16px;max-width:1100px;margin:0 auto}
+.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card h3{margin-bottom:12px;font-size:1.1rem}
+.card h4{margin:12px 0 8px;font-size:.95rem;color:#555}
+.card hr{border:none;border-top:1px dashed #ddd;margin:12px 0}
+/* FORMS */
+.frow{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.frow input,.frow select{padding:8px 12px;border:2px solid #e0e0e0;border-radius:6px;font-size:.9rem;font-family:inherit;flex:1;min-width:120px}
+.frow input:focus,.frow select:focus{border-color:#1a237e;outline:none}
+.frow input[type=number]{min-width:80px;flex:.5}
+button.btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-family:inherit;font-weight:600;font-size:.85rem;color:#fff;white-space:nowrap}
+.owner .btn{background:#1a237e}
+.produksi .btn{background:#1a5f4a}
+.packing .btn{background:#e65100}
+.paket .btn{background:#6a1b9a}
+.btn-danger{background:#c62828!important}
+.btn-sm{padding:4px 10px;font-size:.78rem}
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:8px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #eee}
+th{background:#f5f5f5;font-weight:700;position:sticky;top:0}
+tr:hover{background:#fafafa}
+.tbl-wrap{overflow-x:auto;max-height:400px;overflow-y:auto}
+/* LIST */
+.list-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f9f9f9;border-radius:6px;margin-bottom:4px;font-size:.9rem}
+.list-item .del{color:#c62828;cursor:pointer;font-weight:700;padding:2px 8px}
+.list-item .del:hover{background:#ffebee;border-radius:4px}
+.empty{color:#999;font-style:italic;padding:12px;text-align:center}
+/* ITEM TABLE */
+.item-tbl{width:100%;margin:8px 0;font-size:.85rem}
+.item-tbl th{background:#e8eaf6;color:#1a237e}
+.item-tbl td{padding:6px 8px}
+.total-bar{font-size:1.1rem;font-weight:700;text-align:right;padding:8px;color:#1a237e}
+/* TOAST */
+#toast{position:fixed;top:20px;right:20px;padding:12px 24px;border-radius:8px;color:#fff;font-weight:600;z-index:9999;display:none;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+#toast.show{display:block;animation:slideIn .3s ease}
+#toast.ok{background:#2e7d32}
+#toast.err{background:#c62828}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.75rem;font-weight:700;color:#fff}
+.badge-ok{background:#2e7d32}
+.badge-bad{background:#c62828}
+.badge-info{background:#1565c0}
+/* INV CARD */
+.inv-card{border:1px solid #e0e0e0;border-radius:8px;padding:12px;margin-bottom:8px}
+.inv-card .inv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.inv-card .inv-head strong{font-size:.95rem}
+.inv-card .inv-items{font-size:.82rem;color:#555}
+@media(max-width:600px){
+  .frow{flex-direction:column}
+  .frow input,.frow select{min-width:100%}
+  header{padding:12px 16px}
+  main{padding:8px}
+}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+   <div style="margin-bottom:16px">
+  <svg viewBox="0 0 200 200" width="80" height="80" style="margin:0 auto;display:block">
+    <defs>
+      <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style="stop-color:#1a237e"/>
+        <stop offset="100%" style="stop-color:#3949ab"/>
+      </linearGradient>
+    </defs>
+    <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#lg1)"/>
+    <rect x="30" y="50" width="60" height="50" rx="8" fill="none" stroke="white" stroke-width="5"/>
+    <rect x="110" y="50" width="60" height="50" rx="8" fill="none" stroke="white" stroke-width="5"/>
+    <rect x="70" y="110" width="60" height="50" rx="8" fill="none" stroke="white" stroke-width="5"/>
+    <line x1="60" y1="100" x2="100" y2="110" stroke="white" stroke-width="3" stroke-dasharray="6,4"/>
+    <line x1="140" y1="100" x2="100" y2="110" stroke="white" stroke-width="3" stroke-dasharray="6,4"/>
+    <circle cx="100" cy="35" r="8" fill="#64b5f6"/>
+  </svg>
+</div>
+<h1 style="font-size:1.4rem;background:linear-gradient(135deg,#ffd700,#ffaa00,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">NaviDept ProStock Care</h1>
+<h2 style="font-size:.95rem;color:#3949ab;margin-bottom:4px">Sistem Manajemen Produksi dan Stock</h2>
+<p style="color:#2e7d32;font-weight:600;font-size:.8rem;margin-bottom:12px">☁️ Cloud Connected</p>
+    <form id="loginForm">
+      <input id="user" placeholder="Username" autocomplete="off">
+      <input id="pass" type="password" placeholder="Password">
+      <button type="submit">MASUK</button>
+    </form>
+  </div>
+</div>
+
+<!-- ✅ LOADING SCREEN -->
+<div id="loadingScreen">
+  <div class="spinner"></div>
+  <p>Menghubungkan ke cloud database...</p>
+  <p style="font-size:.8rem;opacity:.7">Mohon tunggu sebentar</p>
+</div>
+
+<div id="app">
+  <header>
+    <div>
+      <div style="display:flex;align-items:center;gap:10px">
+  <svg viewBox="0 0 200 200" width="32" height="32">
+    <rect x="10" y="10" width="180" height="180" rx="40" fill="rgba(255,255,255,.2)"/>
+    <rect x="30" y="50" width="60" height="50" rx="8" fill="none" stroke="white" stroke-width="6"/>
+    <rect x="110" y="50" width="60" height="50" rx="8" fill="none" stroke="white" stroke-width="6"/>
+    <rect x="70" y="110" width="60" height="50" rx="8" fill="none" stroke="white" stroke-width="6"/>
+    <circle cx="100" cy="35" r="8" fill="#90caf9"/>
+  </svg>
+  <h1 id="hdrTitle" style="font-size:1.1rem">NaviDept ProStock Care</h1>
+</div>
+      <span class="info" id="hdrUser"></span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <!-- ✅ SYNC STATUS -->
+      <span id="syncStatus" class="online">☁️ Online</span>
+      <button id="btnLogout">🚪 Logout</button>
+    </div>
+  </header>
+  <nav id="tabs"></nav>
+  <main id="content"></main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ==========================================================
+   ✅ KONFIGURASI SUPABASE
+   ⚠️ GANTI DENGAN URL DAN KEY ANDA!
+   ========================================================== */
+const SUPABASE_URL = 'https://csvkzqburletwqjpaxno.supabase.co/rest/v1/';
+const SUPABASE_KEY = 'sb_publishable_w-b0Tr5PpnS7E6ZundVOlw_7rYyNUZ2';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ==========================================================
+   ✅ DATA LAYER: Cache + Supabase Cloud
+   ========================================================== */
+const CACHE = {};
+let realtimeChannel = null;
+
+function ld(k) {
+    return CACHE[k] || [];
+}
+
+async function sv(k, d) {
+    CACHE[k] = d;
+    const { error } = await db
+        .from('app_data')
+        .upsert({ key: k, data: d, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) {
+        console.error('Sync error:', error);
+        err('⚠️ Gagal sync ke cloud!');
+    }
+}
+
+async function initDB() {
+    showLoading(true);
+    try {
+        const { data, error } = await db.from('app_data').select('*');
+        if (error) throw error;
+        KEYS.forEach(k => { CACHE[k] = []; });
+        (data || []).forEach(row => {
+            if (KEYS.includes(row.key)) CACHE[row.key] = row.data || [];
+        });
+        console.log('✅ Data dimuat dari cloud');
+    } catch (e) {
+        console.error('❌ Gagal muat data:', e);
+        alert('Gagal terhubung ke database!\n\nError: ' + e.message +
+              '\n\nPastikan URL & Key Supabase sudah benar di dalam kode.');
+    }
+    showLoading(false);
+}
+
+function setupRealtime() {
+    if (realtimeChannel) db.removeChannel(realtimeChannel);
+    realtimeChannel = db.channel('navidept_sync')
+        .on('postgres_changes',
+            { event: '*', schema: 'public', table: 'app_data' },
+            (payload) => {
+                const key = payload.new?.key || payload.old?.key;
+                if (key && KEYS.includes(key)) {
+                    CACHE[key] = payload.new?.data || [];
+                    render();
+                    flashSync();
+                }
+            }
+        )
+        .subscribe((status) => {
+            updateSyncStatus(status === 'SUBSCRIBED');
+        });
+}
+
+function showLoading(show) {
+    document.getElementById('loadingScreen').style.display = show ? 'flex' : 'none';
+}
+function updateSyncStatus(online) {
+    const el = document.getElementById('syncStatus');
+    if (el) { el.className = online ? 'online' : 'offline'; el.textContent = online ? '☁️ Online' : '⚠️ Offline'; }
+}
+function flashSync() {
+    const el = document.getElementById('syncStatus');
+    if (el) { el.className = 'syncing'; el.textContent = '🔄 Sync...'; setTimeout(() => { el.className = 'online'; el.textContent = '☁️ Online'; }, 1500); }
+}
+
+async function migrateLocalToCloud() {
+    let count = 0;
+    for (const k of KEYS) {
+        try {
+            const local = JSON.parse(localStorage.getItem(k)) || [];
+            if (local.length > 0) {
+                const existing = CACHE[k] || [];
+                if (existing.length === 0) {
+                    CACHE[k] = local;
+                    await sv(k, local);
+                    count += local.length;
+                }
+            }
+        } catch(e) {}
+    }
+    if (count > 0) ok('Migrasi berhasil! ' + count + ' data dikirim ke cloud.');
+    else err('Tidak ada data lokal baru untuk dimigrasi.');
+}
+
+/* ====== CONSTANTS ====== */
+const USERS={
+  owner:{pw:'owner123',role:'owner',name:'Owner',title:'NaviDept ProStock Care',cls:'owner'},
+  produksi:{pw:'produksi123',role:'produksi',name:'Manajer Produksi',title:'NaviDept ProStock Care',subtitle:'Simanja Nazwa Fashion',cls:'produksi'},
+  packing:{pw:'packing123',role:'packing',name:'Manajer Packing',title:'NaviDept ProStock Care',cls:'packing'},
+  paket:{pw:'paket123',role:'paket',name:'Manajer Packing Paket & Stocker',title:'NaviDept ProStock Care',cls:'paket'}
+};
+const KEYS=['m_kat','m_sat','m_sup','m_pen','m_ker','m_bar','m_hrg','d_beli','d_prod','d_pack','d_paket'];
+const TABS={
+  owner:{master:'📁 Master',bahan:'🧾 Input Bahan',monitor:'📊 Monitoring',stok:'📦 Stok',backup:'💾 Backup'},
+  produksi:{master:'📁 Master',exim:'🔄 Export/Import',input:'✏️ Input',riwayat:'📋 Riwayat'},
+  packing:{input:'✏️ Input',riwayat:'📋 Riwayat'},
+  paket:{input:'📦 Input',stokawal:'📥 Stok Awal',riwayat:'📋 Riwayat'}
+};
+let CUR={role:'',tab:''};
+let tempItems=[];
+
+/* ====== HELPERS ====== */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function gid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5)}
+function td(){return new Date().toISOString().slice(0,10)}
+function fd(s){if(!s)return'-';const d=new Date(s);const m=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];return d.getDate()+' '+m[d.getMonth()]+' '+d.getFullYear()}
+function rp(n){return'Rp '+Number(n||0).toLocaleString('id-ID')}
+function gv(id){const e=document.getElementById(id);return e?e.value.trim():''}
+function ok(m){const t=document.getElementById('toast');t.textContent=m;t.className='show ok';setTimeout(()=>t.className='',2500)}
+function err(m){const t=document.getElementById('toast');t.textContent=m;t.className='show err';setTimeout(()=>t.className='',2500)}
+function opts(arr,vk,lk,sel){return(arr||[]).map(x=>`<option value="${esc(x[vk])}"${sel===x[vk]?' selected':''}>${esc(x[lk])}</option>`).join('')}
+function bnd(id,ev,fn){const e=document.getElementById(id);if(e)e.addEventListener(ev,fn)}
+
+/* ====== HTML GENERATORS ====== */
+function htmlOwner(tab){
+  if(tab==='master'){
+    return `
+    <div class="card"><h3>📁 Kategori</h3>
+      <div class="frow"><input id="katK" placeholder="Kode"><input id="katN" placeholder="Nama Kategori"><button class="btn" onclick="addKat()">Tambah</button></div>
+      <div id="listKat"></div></div>
+    <div class="card"><h3>📏 Satuan</h3>
+      <div class="frow"><input id="satK" placeholder="Kode"><input id="satN" placeholder="Nama Satuan Lengkap (cth: Roll 90 Yard)"><button class="btn" onclick="addSat()">Tambah</button></div>
+      <div id="listSat"></div></div>
+    <div class="card"><h3>🏭 Supplier</h3>
+      <div class="frow"><input id="supK" placeholder="Kode"><input id="supN" placeholder="Nama Supplier"><button class="btn" onclick="addSup()">Tambah</button></div>
+      <div id="listSup"></div></div>
+    <div class="card"><h3>👕 Barang</h3>
+      <div class="frow"><input id="barK" placeholder="Kode (cth: B01)"><input id="barN" placeholder="Nama Barang (cth: Biru Pjg)"><button class="btn" onclick="addBar()">Tambah</button></div>
+      <div id="listBar"></div></div>`;
+  }
+  if(tab==='bahan'){
+    return `
+    <div class="card"><h3>🧾 Input Pembelian Bahan</h3>
+      <div class="frow">
+        <input id="bInv" placeholder="No. Invoice">
+        <input id="bTgl" type="date" value="${td()}">
+        <select id="bSup"><option value="">-- Supplier --</option>${opts(ld('m_sup'),'k','n')}</select>
+      </div>
+      <hr><h4>Item Bahan</h4>
+      <div class="frow">
+        <select id="bKat"><option value="">-- Kategori --</option>${opts(ld('m_kat'),'k','n')}</select>
+        <input id="bNama" placeholder="Nama Bahan">
+        <select id="bSat"><option value="">-- Satuan --</option>${opts(ld('m_sat'),'k','n')}</select>
+      </div>
+      <div class="frow">
+        <input id="bJml" type="number" placeholder="Jumlah" min="1">
+        <input id="bHrg" type="number" placeholder="Harga" min="0">
+        <input id="bKet" placeholder="Keterangan">
+        <button class="btn" onclick="addItem()">➕ Tambah Item</button>
+      </div>
+      <div id="itemList"></div>
+      <div id="invoiceTotal" class="total-bar"></div>
+      <button class="btn" onclick="saveInvoice()" style="width:100%;padding:12px;font-size:1rem;margin-top:8px">💾 Simpan Invoice</button>
+    </div>
+    <div class="card"><h3>📋 Riwayat Invoice</h3><div id="listBeli"></div></div>`;
+  }
+  if(tab==='monitor'){
+    return `<div class="card"><h3>📊 Monitoring Produksi</h3><div id="monitorData"></div></div>`;
+  }
+  if(tab==='stok'){
+    const now=new Date(),y=now.getFullYear();
+    const bulanOpts=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'].map((b,i)=>`<option value="${String(i+1).padStart(2,'0')}"${i===now.getMonth()?' selected':''}>${b}</option>`).join('');
+    const tahunOpts=[y-1,y,y+1].map(t=>`<option value="${t}"${t===y?' selected':''}>${t}</option>`).join('');
+    return `<div class="card"><h3>📦 Stok Barang</h3>
+      <div class="frow">
+        <select id="stokPeriode" onchange="toggleStokFilter();rStok()">
+          <option value="semua">Semua</option>
+          <option value="harian">Harian</option>
+          <option value="mingguan">Mingguan</option>
+          <option value="bulanan">Bulanan</option>
+        </select>
+      </div>
+      <div id="filterTanggal" class="frow" style="display:none">
+        <label>Dari:</label><input id="stokDari" type="date" value="${td()}">
+        <label>Sampai:</label><input id="stokSampai" type="date" value="${td()}">
+        <button class="btn btn-sm" onclick="rStok()">Terapkan</button>
+      </div>
+      <div id="filterBulanan" class="frow" style="display:none">
+        <label>Bulan:</label><select id="stokBulan">${bulanOpts}</select>
+        <label>Tahun:</label><select id="stokTahun">${tahunOpts}</select>
+        <button class="btn btn-sm" onclick="rStok()">Terapkan</button>
+      </div>
+      <div id="stokData"></div></div>`;
+  }
+  if(tab==='backup'){
+    return `<div class="card"><h3>💾 Backup & Restore</h3>
+      <p style="margin-bottom:12px;color:#666">Download semua data atau restore dari file backup.</p>
+      <div class="frow">
+        <button class="btn" onclick="backupAll()">📥 Download Backup</button>
+        <label class="btn" style="cursor:pointer">📤 Restore<input type="file" accept=".json" onchange="restoreAll(this.files[0])" style="display:none"></label>
+      </div>
+      <hr>
+      <h4>☁️ Migrasi Data Lokal → Cloud</h4>
+      <p style="margin-bottom:8px;color:#666;font-size:.85rem">Jika ada data lama di browser ini, kirim ke cloud database.</p>
+      <button class="btn" onclick="migrateLocalToCloud()">🚀 Migrasi Data Lokal → Cloud</button>
+    </div>`;
+  }
+  return '';
+}
+
+function htmlProduksi(tab){
+  if(tab==='master'){
+    return `
+    <div class="card"><h3>👤 Penjahit</h3>
+      <div class="frow"><input id="penK" placeholder="Kode"><input id="penN" placeholder="Nama Penjahit"><button class="btn" onclick="addPen()">Tambah</button></div>
+      <div id="listPen"></div></div>
+    <div class="card"><h3>🔧 Pekerjaan</h3>
+      <div class="frow"><input id="kerK" placeholder="Kode"><input id="kerN" placeholder="Nama Pekerjaan (cth: Jahit, BB, QC)"><button class="btn" onclick="addKer()">Tambah</button></div>
+      <div id="listKer"></div></div>
+    <div class="card"><h3>👕 Barang</h3>
+      <div class="frow"><input id="barK" placeholder="Kode"><input id="barN" placeholder="Nama Barang"><button class="btn" onclick="addBar()">Tambah</button></div>
+      <div id="listBar"></div></div>
+    <div class="card"><h3>💰 Harga Produksi</h3>
+      <div class="frow">
+        <select id="hrgKer"><option value="">-- Pekerjaan --</option>${opts(ld('m_ker'),'k','n')}</select>
+        <select id="hrgBar"><option value="">-- Barang --</option>${opts(ld('m_bar'),'k','n')}</select>
+        <input id="hrgV" type="number" placeholder="Harga/pcs" min="0">
+        <button class="btn" onclick="addHrg()">Tambah</button>
+      </div>
+      <div id="listHrg"></div></div>`;
+  }
+  if(tab==='exim'){
+    return `<div class="card"><h3>🔄 Export / Import Master</h3>
+      <p style="margin-bottom:12px;color:#666">Export data master (Penjahit, Pekerjaan, Barang, Harga) atau import dari file.</p>
+      <div class="frow">
+        <button class="btn" onclick="exportMaster()">📥 Export Master</button>
+        <label class="btn" style="cursor:pointer">📤 Import Master<input type="file" accept=".json" onchange="importMaster(this.files[0])" style="display:none"></label>
+      </div></div>`;
+  }
+  if(tab==='input'){
+    const invs=ld('d_beli');
+    return `<div class="card"><h3>✏️ Input Produksi</h3>
+      <div class="frow">
+        <select id="pInv"><option value="">-- Pilih Invoice --</option>${invs.map(x=>{
+          let info=x.items?x.items.length+' item':x.nama||'';
+          return `<option value="${esc(x.inv)}">${esc(x.inv)} - ${esc(x.supN||'')} (${info})</option>`;
+        }).join('')}</select>
+      </div>
+      <div id="invDetail" style="margin:8px 0;font-size:.85rem;color:#555"></div>
+      <div class="frow">
+        <input id="pTgl" type="date" value="${td()}">
+        <select id="pPen"><option value="">-- Penjahit --</option>${opts(ld('m_pen'),'k','n')}</select>
+      </div>
+      <div class="frow">
+        <select id="pKer"><option value="">-- Pekerjaan --</option>${opts(ld('m_ker'),'k','n')}</select>
+        <select id="pBar"><option value="">-- Barang --</option>${opts(ld('m_bar'),'k','n')}</select>
+        <input id="pJml" type="number" placeholder="Jumlah" min="1">
+        <button class="btn" onclick="addProd()">Simpan</button>
+      </div>
+    </div>`;
+  }
+  if(tab==='riwayat'){
+    return `<div class="card"><h3>📋 Riwayat Produksi</h3><div id="listProd"></div></div>`;
+  }
+  return '';
+}
+
+function htmlPacking(tab){
+  if(tab==='input'){
+    const ker=ld('m_ker'),bar=ld('m_bar'),prod=ld('d_prod');
+    const jahitItems=prod.filter(p=>{const k=ker.find(x=>x.k===p.ker);return k&&k.n.toLowerCase().includes('jahit')});
+    const packed=ld('d_pack');
+    const pending=jahitItems.filter(p=>!packed.find(pk=>pk.prodId===p.id));
+    return `<div class="card"><h3>✏️ Input Packing</h3>
+      <p style="margin-bottom:8px;color:#666;font-size:.85rem">Barang dari produksi (khusus pekerjaan Jahit):</p>
+      ${pending.length?`<div class="frow">
+        <select id="pkProd">${pending.map(p=>{
+          const b=bar.find(x=>x.k===p.bar);
+          return `<option value="${p.id}">${fd(p.tgl)} - ${esc(b?b.n:p.bar)} (${p.jml} pcs)</option>`;
+        }).join('')}</select>
+      </div>`:'<p class="empty">Tidak ada barang jahit pending.</p>'}
+      <div class="frow">
+        <input id="pkOk" type="number" placeholder="Jumlah OK" min="0">
+        <input id="pkBad" type="number" placeholder="Jumlah Cacat" min="0">
+      </div>
+      <div class="frow">
+        <select id="pkKond"><option value="-">-</option><option value="Kotor">Kotor</option><option value="Reject Bahan">Reject Bahan</option></select>
+        <input id="pkKet" placeholder="Keterangan">
+        <button class="btn" onclick="addPack()">Simpan</button>
+      </div>
+    </div>`;
+  }
+  if(tab==='riwayat'){
+    return `<div class="card"><h3>📋 Riwayat Packing</h3><div id="listPack"></div></div>`;
+  }
+  return '';
+}
+
+function htmlPaket(tab){
+  if(tab==='input'){
+    const stok=calcStok().filter(x=>x.stok>0);
+    return `<div class="card"><h3>📦 Input Packing Paket</h3>
+      <div class="frow">
+        <select id="ptPlat"><option value="Shopee">Shopee</option><option value="TikTok">TikTok</option><option value="Tokopedia">Tokopedia</option><option value="Lainnya">Lainnya</option></select>
+        <input id="ptOrd" placeholder="No. Order">
+      </div>
+      <div class="frow">
+        <select id="ptBar"><option value="">-- Barang --</option>${stok.map(x=>`<option value="${esc(x.kode)}">${esc(x.nama)} (stok: ${x.stok})</option>`).join('')}</select>
+        <input id="ptJml" type="number" placeholder="Jumlah" min="1">
+      </div>
+      <div class="frow">
+        <input id="ptResi" placeholder="No. Resi">
+        <input id="ptKet" placeholder="Keterangan">
+        <button class="btn" onclick="addPaket()">Simpan</button>
+      </div>
+    </div>`;
+  }
+  if(tab==='stokawal'){
+    const bar=ld('m_bar').filter(b=>b.k.toUpperCase().startsWith('B'));
+    return `<div class="card"><h3>📥 Input Stok Awal (Manual)</h3>
+      <p style="color:#666;font-size:.85rem;margin-bottom:12px">Gunakan form ini untuk input stok barang yang sudah ada <strong>sebelum</strong> aplikasi ini dipakai. Data akan masuk sebagai packing OK agar stok langsung tersedia.</p>
+      <div class="frow">
+        <input id="saTgl" type="date" value="${td()}">
+        <select id="saBar"><option value="">-- Pilih Barang --</option>${opts(bar,'k','n')}</select>
+        <input id="saJml" type="number" placeholder="Jumlah Stok" min="1">
+        <input id="saKet" placeholder="Keterangan (cth: Stok awal Oktober)">
+        <button class="btn" onclick="addStokAwal()">💾 Simpan</button>
+      </div>
+      <hr><h4>Riwayat Input Stok Awal</h4>
+      <div id="listStokAwal"></div>
+    </div>`;
+  }
+  if(tab==='riwayat'){
+    return `<div class="card"><h3>📋 Riwayat Pengiriman</h3><div id="listPaket"></div></div>`;
+  }
+  return '';
+}
+
+/* ====== RENDER & BIND ====== */
+function render(){
+  const role=CUR.role, tab=CUR.tab;
+  const u=USERS[role];
+  document.getElementById('app').className=u.cls;
+  const uu=USERS[role];
+  document.getElementById('hdrTitle').textContent=uu.title||'NaviDept ProStock Care';
+  const hintMap={
+    owner:'💡 Pantau produksi, stok & pengiriman',
+    produksi:'💡 Kelola data penjahit, pekerjaan & input produksi',
+    packing:'💡 Cek kualitas & jumlah barang jahit',
+    paket:'💡 Pack, kirim pesanan & kelola stok awal'
+  };
+  document.getElementById('hdrUser').innerHTML=(uu.subtitle?uu.subtitle+'<br>':'')+uu.name+'<br><span style="font-size:.72rem;opacity:.75;font-style:italic">'+(hintMap[role]||'')+'</span>';
+  const tabs=TABS[role];
+  document.getElementById('tabs').innerHTML=Object.entries(tabs).map(([k,v])=>
+    `<button class="${tab===k?'active':''}" onclick="switchTab('${k}')">${v}</button>`
+  ).join('');
+  let html='';
+  if(role==='owner') html=htmlOwner(tab);
+  else if(role==='produksi') html=htmlProduksi(tab);
+  else if(role==='packing') html=htmlPacking(tab);
+  else if(role==='paket') html=htmlPaket(tab);
+  document.getElementById('content').innerHTML=html;
+  if(role==='owner'){
+    if(tab==='master'){rKat();rSat();rSup();rBar()}
+    if(tab==='bahan'){renderItemList();rBeli()}
+    if(tab==='monitor') rMonitor();
+    if(tab==='stok') rStok();
+  }
+  if(role==='produksi'){
+    if(tab==='master'){rPen();rKer();rBar();rHrg()}
+    if(tab==='input') bnd('pInv','change',showInvDetail);
+    if(tab==='riwayat') rProd();
+  }
+  if(role==='packing'&&tab==='riwayat') rPack();
+  if(role==='paket'&&tab==='riwayat') rPaket();
+  if(role==='paket'&&tab==='stokawal') rStokAwal();
+}
+
+function switchTab(t){
+  CUR.tab=t;
+  sessionStorage.setItem('navi_tab',t);
+  tempItems=[];
+  render();
+}
+
+/* ====== OWNER CRUD ====== */
+async function addKat(){
+  const k=gv('katK'),n=gv('katN');
+  if(!k||!n)return err('Lengkapi kode & nama!');
+  const a=ld('m_kat');
+  if(a.find(x=>x.k===k))return err('Kode sudah ada!');
+  a.push({k,n});await sv('m_kat',a);ok('Kategori ditambahkan');render();
+}
+async function delKat(k){
+  if(!confirm('Hapus kategori ini?'))return;
+  await sv('m_kat',ld('m_kat').filter(x=>x.k!==k));ok('Dihapus');render();
+}
+async function addSat(){
+  const k=gv('satK'),n=gv('satN');
+  if(!k||!n)return err('Lengkapi kode & nama!');
+  const a=ld('m_sat');
+  if(a.find(x=>x.k===k))return err('Kode sudah ada!');
+  a.push({k,n});await sv('m_sat',a);ok('Satuan ditambahkan');render();
+}
+async function delSat(k){
+  if(!confirm('Hapus satuan ini?'))return;
+  await sv('m_sat',ld('m_sat').filter(x=>x.k!==k));ok('Dihapus');render();
+}
+async function addSup(){
+  const k=gv('supK'),n=gv('supN');
+  if(!k||!n)return err('Lengkapi kode & nama!');
+  const a=ld('m_sup');
+  if(a.find(x=>x.k===k))return err('Kode sudah ada!');
+  a.push({k,n});await sv('m_sup',a);ok('Supplier ditambahkan');render();
+}
+async function delSup(k){
+  if(!confirm('Hapus supplier ini?'))return;
+  await sv('m_sup',ld('m_sup').filter(x=>x.k!==k));ok('Dihapus');render();
+}
+
+/* ====== BARANG CRUD (satu tempat, dipakai Owner & Produksi) ====== */
+async function addBar(){
+  const k=gv('barK'),n=gv('barN');
+  if(!k||!n)return err('Lengkapi kode & nama!');
+  const a=ld('m_bar');
+  if(a.find(x=>x.k===k))return err('Kode sudah ada!');
+  a.push({k,n});await sv('m_bar',a);ok('Barang ditambahkan');render();
+}
+async function delBar(k){
+  if(!confirm('Hapus barang ini?'))return;
+  await sv('m_bar',ld('m_bar').filter(x=>x.k!==k));ok('Dihapus');render();
+}
+
+/* Multi-item invoice */
+function addItem(){
+  const kat=gv('bKat'),nama=gv('bNama'),sat=gv('bSat'),jml=+gv('bJml'),hrg=+gv('bHrg'),ket=gv('bKet');
+  if(!kat||!nama||!sat||!jml)return err('Lengkapi: Kategori, Nama, Satuan, Jumlah!');
+  const katD=ld('m_kat').find(x=>x.k===kat),satD=ld('m_sat').find(x=>x.k===sat);
+  tempItems.push({id:gid(),kat,katN:katD?katD.n:'',nama,sat,satN:satD?satD.n:'',jml,hrg,ket,total:jml*hrg});
+  ['bNama','bJml','bHrg','bKet'].forEach(id=>{const e=document.getElementById(id);if(e)e.value=''});
+  renderItemList();
+}
+function rmItem(i){tempItems.splice(i,1);renderItemList()}
+function renderItemList(){
+  const el=document.getElementById('itemList');
+  const tel=document.getElementById('invoiceTotal');
+  if(!el)return;
+  if(!tempItems.length){el.innerHTML='<p class="empty">Belum ada item</p>';if(tel)tel.textContent='';return}
+  let h=`<table class="item-tbl"><tr><th>No</th><th>Kategori</th><th>Nama</th><th>Satuan</th><th>Jml</th><th>Harga</th><th>Total</th><th></th></tr>`;
+  let tot=0;
+  tempItems.forEach((it,i)=>{
+    tot+=it.total;
+    h+=`<tr><td>${i+1}</td><td>${esc(it.katN)}</td><td>${esc(it.nama)}</td><td>${esc(it.satN)}</td><td>${it.jml}</td><td>${rp(it.hrg)}</td><td>${rp(it.total)}</td><td><span class="del" onclick="rmItem(${i})">✕</span></td></tr>`;
+  });
+  h+=`</table>`;
+  el.innerHTML=h;
+  if(tel)tel.textContent='Total Invoice: '+rp(tot);
+}
+async function saveInvoice(){
+  const inv=gv('bInv'),tgl=gv('bTgl'),sup=gv('bSup');
+  if(!inv||!tgl||!sup)return err('Lengkapi: Invoice, Tanggal, Supplier!');
+  if(!tempItems.length)return err('Belum ada item! Klik "Tambah Item" dulu.');
+  const a=ld('d_beli');
+  if(a.find(x=>x.inv===inv))return err('No. Invoice sudah ada!');
+  const supD=ld('m_sup').find(x=>x.k===sup);
+  a.push({id:gid(),inv,tgl,sup,supN:supD?supD.n:'',items:tempItems.map(it=>({...it})),total:tempItems.reduce((s,x)=>s+x.total,0),ts:new Date().toISOString()});
+  await sv('d_beli',a);
+  tempItems=[];
+  ok('Invoice tersimpan!');render();
+}
+async function delBeli(id){
+  if(!confirm('Hapus invoice ini?'))return;
+  await sv('d_beli',ld('d_beli').filter(x=>x.id!==id));ok('Dihapus');render();
+}
+
+/* ====== PRODUKSI CRUD ====== */
+async function addPen(){
+  const k=gv('penK'),n=gv('penN');
+  if(!k||!n)return err('Lengkapi!');
+  const a=ld('m_pen');if(a.find(x=>x.k===k))return err('Kode sudah ada!');
+  a.push({k,n});await sv('m_pen',a);ok('Penjahit ditambahkan');render();
+}
+async function delPen(k){if(!confirm('Hapus?'))return;await sv('m_pen',ld('m_pen').filter(x=>x.k!==k));ok('Dihapus');render()}
+async function addKer(){
+  const k=gv('kerK'),n=gv('kerN');
+  if(!k||!n)return err('Lengkapi!');
+  const a=ld('m_ker');if(a.find(x=>x.k===k))return err('Kode sudah ada!');
+  a.push({k,n});await sv('m_ker',a);ok('Pekerjaan ditambahkan');render();
+}
+async function delKer(k){if(!confirm('Hapus?'))return;await sv('m_ker',ld('m_ker').filter(x=>x.k!==k));ok('Dihapus');render()}
+async function addHrg(){
+  const pk=gv('hrgKer'),bk=gv('hrgBar'),v=+gv('hrgV');
+  if(!pk||!bk||!v)return err('Lengkapi!');
+  const a=ld('m_hrg');
+  const exist=a.find(x=>x.pk===pk&&x.bk===bk);
+  if(exist){exist.v=v}else{a.push({pk,bk,v})}
+  await sv('m_hrg',a);ok('Harga disimpan');render();
+}
+async function delHrg(pk,bk){if(!confirm('Hapus?'))return;await sv('m_hrg',ld('m_hrg').filter(x=>!(x.pk===pk&&x.bk===bk)));ok('Dihapus');render()}
+
+function exportMaster(){
+  const data={m_pen:ld('m_pen'),m_ker:ld('m_ker'),m_bar:ld('m_bar'),m_hrg:ld('m_hrg')};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='NaviDept_Master_'+td()+'.json';a.click();ok('Master di-export!');
+}
+async function importMaster(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      const raw=JSON.parse(e.target.result);
+      const data=raw.data||raw;
+      let log=[];
+      const pen=data.dataPenjahit||data.penjahit||data.m_pen||data.pen||[];
+      if(pen.length){
+        const arr=pen.map(x=>({k:x.k||x.kode||x.id||'',n:x.n||x.nama||x.name||''})).filter(x=>x.k&&x.n);
+        if(arr.length){await sv('m_pen',arr);log.push('✓ Penjahit: '+arr.length+' data')}
+      }
+      const bar=data.dataBarang||data.barang||data.m_bar||data.bar||[];
+      if(bar.length){
+        const arr=bar.map(x=>({k:x.k||x.kode||x.id||'',n:x.n||x.nama||x.jenis||x.name||''})).filter(x=>x.k&&x.n);
+        if(arr.length){await sv('m_bar',arr);log.push('✓ Barang: '+arr.length+' data')}
+      }
+      const ker=data.dataPekerjaan||data.pekerjaan||data.m_ker||data.ker||[];
+      if(ker.length){
+        const arr=ker.map(x=>({k:x.k||x.kode||x.id||'',n:x.n||x.nama||x.name||''})).filter(x=>x.k&&x.n);
+        if(arr.length){await sv('m_ker',arr);log.push('✓ Pekerjaan: '+arr.length+' data')}
+      }
+      const hrg=data.dataHarga||data.harga||data.m_hrg||data.hrg||[];
+      if(hrg.length){
+        const arr=hrg.map(x=>({pk:x.pk||x.kodeKer||x.ker||'',bk:x.bk||x.kodeBar||x.bar||'',v:+(x.v||x.harga||x.value||0)})).filter(x=>x.pk&&x.bk);
+        if(arr.length){await sv('m_hrg',arr);log.push('✓ Harga: '+arr.length+' data')}
+      }
+      if(!log.length){
+        alert('Tidak ada data yang dikenali!\n\nKey yang ditemukan:\n'+Object.keys(data).join(', ')+'\n\nKey dalam "data":\n'+(raw.data?Object.keys(raw.data).join(', '):'-'));
+        return;
+      }
+      alert('Berhasil import:\n\n'+log.join('\n'));
+      render();
+    }catch(err){
+      alert('File tidak valid!\n\nError: '+err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function addProd(){
+  const inv=gv('pInv'),tgl=gv('pTgl'),pen=gv('pPen'),ker=gv('pKer'),bar=gv('pBar'),jml=+gv('pJml');
+  if(!inv||!tgl||!pen||!ker||!bar||!jml)return err('Lengkapi semua field!');
+  const a=ld('d_prod');
+  a.push({id:gid(),inv,tgl,pen,ker,bar,jml,ts:new Date().toISOString()});
+  await sv('d_prod',a);ok('Produksi disimpan');render();
+}
+async function delProd(id){if(!confirm('Hapus?'))return;await sv('d_prod',ld('d_prod').filter(x=>x.id!==id));ok('Dihapus');render()}
+
+function showInvDetail(){
+  const inv=gv('pInv'),el=document.getElementById('invDetail');
+  if(!el)return;
+  if(!inv){el.innerHTML='';return}
+  const d=ld('d_beli').find(x=>x.inv===inv);
+  if(!d){el.innerHTML='';return}
+  if(d.items&&d.items.length){
+    el.innerHTML=`<strong>${esc(d.supN)}</strong> - ${fd(d.tgl)}<br>`+d.items.map(it=>`• ${esc(it.nama)} (${it.jml} ${esc(it.satN)})`).join('<br>');
+  }else{
+    el.innerHTML=`<strong>${esc(d.supN||'')}</strong> - ${fd(d.tgl)} - ${esc(d.nama||'')} (${d.jml||0})`;
+  }
+}
+
+/* ====== PACKING CRUD ====== */
+async function addPack(){
+  const prodId=gv('pkProd'),ok2=+gv('pkOk'),bad=+gv('pkBad'),kond=gv('pkKond'),ket=gv('pkKet');
+  if(!prodId)return err('Pilih barang dari produksi!');
+  if(!ok2&&!bad)return err('Isi jumlah OK atau Cacat!');
+  const prod=ld('d_prod').find(x=>x.id===prodId);
+  if(!prod)return err('Data produksi tidak ditemukan!');
+  const a=ld('d_pack');
+  a.push({id:gid(),prodId,tgl:td(),bar:prod.bar,jml:ok2+bad,ok:ok2,bad,kond,ket,ts:new Date().toISOString()});
+  await sv('d_pack',a);ok('Packing disimpan');render();
+}
+async function delPack(id){
+  if(!confirm('Hapus data packing ini?'))return;
+  await sv('d_pack',ld('d_pack').filter(x=>x.id!==id));
+  ok('Dihapus');render();
+}
+
+/* ====== PAKET CRUD ====== */
+async function addStokAwal(){
+  const tgl=gv('saTgl'),bar=gv('saBar'),jml=+gv('saJml'),ket=gv('saKet');
+  if(!tgl||!bar||!jml)return err('Lengkapi: Tanggal, Barang, Jumlah!');
+  const a=ld('d_pack');
+  a.push({id:gid(),prodId:'STOK-AWAL',tgl,bar,jml,ok:jml,bad:0,kond:'Stok Awal',ket:ket||'Input manual stok awal',ts:new Date().toISOString()});
+  await sv('d_pack',a);
+  ok('Stok awal tersimpan!');render();
+}
+async function delStokAwal(id){
+  if(!confirm('Hapus data stok awal ini?'))return;
+  await sv('d_pack',ld('d_pack').filter(x=>x.id!==id));
+  ok('Dihapus');render();
+}
+function rStokAwal(){
+  const el=document.getElementById('listStokAwal');if(!el)return;
+  const bar=ld('m_bar');
+  const a=ld('d_pack').filter(x=>x.prodId==='STOK-AWAL'||x.kond==='Stok Awal');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada input stok awal</p>';return}
+  el.innerHTML=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Barang</th><th>Jumlah</th><th>Keterangan</th><th></th></tr>`+
+    a.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+      const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+      return `<tr><td>${fd(x.tgl)}</td><td>${esc(bn)}</td><td><strong>${x.ok}</strong></td><td>${esc(x.ket)}</td><td><span class="del" onclick="delStokAwal('${x.id}')">✕</span></td></tr>`;
+    }).join('')+`</table></div>`;
+}
+async function addPaket(){
+  const plat=gv('ptPlat'),ord=gv('ptOrd'),bar=gv('ptBar'),jml=+gv('ptJml'),resi=gv('ptResi'),ket=gv('ptKet');
+  if(!ord||!bar||!jml)return err('Lengkapi: Order, Barang, Jumlah!');
+  const stok=calcStok().find(x=>x.kode===bar);
+  if(stok&&jml>stok.stok)return err('Stok tidak cukup! Stok tersedia: '+stok.stok);
+  const a=ld('d_paket');
+  a.push({id:gid(),tgl:td(),plat,ord,bar,jml,resi,ket,ts:new Date().toISOString()});
+  await sv('d_paket',a);ok('Paket disimpan');render();
+}
+
+/* ====== DISPLAY FUNCTIONS ====== */
+function rKat(){
+  const el=document.getElementById('listKat');if(!el)return;
+  const a=ld('m_kat');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>`<div class="list-item"><span><strong>${esc(x.k)}</strong> - ${esc(x.n)}</span><span class="del" onclick="delKat('${esc(x.k)}')">✕</span></div>`).join('');
+}
+function rSat(){
+  const el=document.getElementById('listSat');if(!el)return;
+  const a=ld('m_sat');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>`<div class="list-item"><span><strong>${esc(x.k)}</strong> - ${esc(x.n)}</span><span class="del" onclick="delSat('${esc(x.k)}')">✕</span></div>`).join('');
+}
+function rSup(){
+  const el=document.getElementById('listSup');if(!el)return;
+  const a=ld('m_sup');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>`<div class="list-item"><span><strong>${esc(x.k)}</strong> - ${esc(x.n)}</span><span class="del" onclick="delSup('${esc(x.k)}')">✕</span></div>`).join('');
+}
+function rBar(){
+  const el=document.getElementById('listBar');if(!el)return;
+  const a=ld('m_bar');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>`<div class="list-item"><span><strong>${esc(x.k)}</strong> - ${esc(x.n)}</span><span class="del" onclick="delBar('${esc(x.k)}')">✕</span></div>`).join('');
+}
+function rBeli(){
+  const el=document.getElementById('listBeli');if(!el)return;
+  const a=ld('d_beli');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada invoice</p>';return}
+  el.innerHTML=a.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+    let itemsHtml='';
+    if(x.items&&x.items.length){
+      itemsHtml=x.items.map(it=>`• ${esc(it.nama)} - ${it.jml} ${esc(it.satN)} = ${rp(it.total)}`).join('<br>');
+    }else{
+      itemsHtml=`• ${esc(x.nama||'-')} - ${x.jml||0} ${esc(x.satN||'')} = ${rp(x.total||0)}`;
+    }
+    return `<div class="inv-card">
+      <div class="inv-head"><strong>${esc(x.inv)}</strong><span>${fd(x.tgl)} | ${esc(x.supN||'')}</span><span class="del" onclick="delBeli('${x.id}')">✕</span></div>
+      <div class="inv-items">${itemsHtml}</div>
+      <div style="text-align:right;font-weight:700;margin-top:4px">${rp(x.total)}</div>
+    </div>`;
+  }).join('');
+}
+function rPen(){
+  const el=document.getElementById('listPen');if(!el)return;
+  const a=ld('m_pen');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>`<div class="list-item"><span><strong>${esc(x.k)}</strong> - ${esc(x.n)}</span><span class="del" onclick="delPen('${esc(x.k)}')">✕</span></div>`).join('');
+}
+function rKer(){
+  const el=document.getElementById('listKer');if(!el)return;
+  const a=ld('m_ker');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>`<div class="list-item"><span><strong>${esc(x.k)}</strong> - ${esc(x.n)}</span><span class="del" onclick="delKer('${esc(x.k)}')">✕</span></div>`).join('');
+}
+function rHrg(){
+  const el=document.getElementById('listHrg');if(!el)return;
+  const a=ld('m_hrg'),ker=ld('m_ker'),bar=ld('m_bar');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=a.map(x=>{
+    const kn=(ker.find(k=>k.k===x.pk)||{}).n||x.pk;
+    const bn=(bar.find(b=>b.k===x.bk)||{}).n||x.bk;
+    return `<div class="list-item"><span>${esc(kn)} + ${esc(bn)} = <strong>${rp(x.v)}</strong></span><span class="del" onclick="delHrg('${esc(x.pk)}','${esc(x.bk)}')">✕</span></div>`;
+  }).join('');
+}
+function rProd(){
+  const el=document.getElementById('listProd');if(!el)return;
+  const a=ld('d_prod'),pen=ld('m_pen'),ker=ld('m_ker'),bar=ld('m_bar'),hrg=ld('m_hrg');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  let grandTotal=0;
+  const rows=a.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+    const pn=(pen.find(p=>p.k===x.pen)||{}).n||x.pen;
+    const kn=(ker.find(k=>k.k===x.ker)||{}).n||x.ker;
+    const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+    const h=(hrg.find(z=>z.pk===x.ker&&z.bk===x.bar)||{}).v||0;
+    const total=x.jml*h;
+    grandTotal+=total;
+    return `<tr><td>${fd(x.tgl)}</td><td>${esc(x.inv)}</td><td>${esc(pn)}</td><td>${esc(kn)}</td><td>${esc(bn)}</td><td>${x.jml}</td><td>${rp(h)}</td><td><strong>${rp(total)}</strong></td><td><span class="del" onclick="delProd('${x.id}')">✕</span></td></tr>`;
+  }).join('');
+  el.innerHTML=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Invoice</th><th>Penjahit</th><th>Pekerjaan</th><th>Barang</th><th>Jml</th><th>Harga</th><th>Total</th><th></th></tr>`+
+    rows+
+    `<tr style="background:#e8eaf6"><td colspan="7" style="text-align:right;font-weight:700">GRAND TOTAL:</td><td colspan="2" style="font-weight:700;color:#1a5f4a">${rp(grandTotal)}</td></tr>`+
+    `</table></div>`;
+}
+function rPack(){
+  const el=document.getElementById('listPack');if(!el)return;
+  const a=ld('d_pack'),bar=ld('m_bar');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Barang</th><th>OK</th><th>Reject</th><th>Kondisi</th><th>Ket</th><th></th></tr>`+
+    a.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+      const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+      return `<tr><td>${fd(x.tgl)}</td><td>${esc(bn)}</td><td><span class="badge badge-ok">${x.ok}</span></td><td><span class="badge badge-bad">${x.bad}</span></td><td>${esc(x.kond)}</td><td>${esc(x.ket)}</td><td><span class="del" onclick="delPack('${x.id}')">✕</span></td></tr>`;
+    }).join('')+`</table></div>`;
+}
+function rPaket(){
+  const el=document.getElementById('listPaket');if(!el)return;
+  const a=ld('d_paket'),bar=ld('m_bar');
+  if(!a.length){el.innerHTML='<p class="empty">Belum ada data</p>';return}
+  el.innerHTML=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Platform</th><th>Order</th><th>Barang</th><th>Jml</th><th>Resi</th><th>Ket</th></tr>`+
+    a.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+      const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+      return `<tr><td>${fd(x.tgl)}</td><td><span class="badge badge-info">${esc(x.plat)}</span></td><td>${esc(x.ord)}</td><td>${esc(bn)}</td><td>${x.jml}</td><td>${esc(x.resi)}</td><td>${esc(x.ket)}</td></tr>`;
+    }).join('')+`</table></div>`;
+}
