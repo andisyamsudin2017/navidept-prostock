@@ -905,3 +905,178 @@ function rPaket(){
       return `<tr><td>${fd(x.tgl)}</td><td><span class="badge badge-info">${esc(x.plat)}</span></td><td>${esc(x.ord)}</td><td>${esc(bn)}</td><td>${x.jml}</td><td>${esc(x.resi)}</td><td>${esc(x.ket)}</td></tr>`;
     }).join('')+`</table></div>`;
 }
+function rMonitor(){
+  const el=document.getElementById('monitorData');if(!el)return;
+  const prod=ld('d_prod'),bar=ld('m_bar'),ker=ld('m_ker'),pack=ld('d_pack'),paket=ld('d_paket'),pen=ld('m_pen');
+  // === MP: hanya kode PK ===
+  const mp=prod.filter(p=>p.ker&&p.ker.toUpperCase().startsWith('PK'));
+  let h=`<h4 style="color:#1a237e">📊 MP - Monitoring Produksi (Jahit)</h4>`;
+    if(!mp.length){h+=`<p class="empty">Belum ada data</p>`}
+  else{h+=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Invoice</th><th>Barang</th><th>Jml</th></tr>`+
+    mp.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+      const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+      return `<tr><td>${fd(x.tgl)}</td><td>${esc(x.inv)}</td><td>${esc(bn)}</td><td>${x.jml}</td></tr>`;
+    }).join('')+`</table></div>`}
+  // === MK: ringkasan per barang ===
+  h+=`<hr><h4 style="color:#1a237e">📦 MK - Monitoring Packing & Kualitas</h4>`;
+  const mk=bar.map(b=>{
+    const pJ=prod.filter(p=>p.bar===b.k&&p.ker&&p.ker.toUpperCase().startsWith('PK')).reduce((s,x)=>s+x.jml,0);
+    const pOk=pack.filter(x=>x.bar===b.k).reduce((s,x)=>s+(x.ok||0),0);
+    const rej=pack.filter(x=>x.bar===b.k).reduce((s,x)=>s+(x.bad||0),0);
+    const lp=pack.filter(x=>x.bar===b.k).sort((a,b)=>b.tgl.localeCompare(a.tgl))[0];
+    const kond=lp?lp.kond:'-';
+    const kirim=paket.filter(x=>x.bar===b.k).reduce((s,x)=>s+x.jml,0);
+    return{kode:b.k,nama:b.n,pJ,pOk,rej,kond,stok:pOk-kirim};
+  }).filter(x=>x.pJ>0||x.pOk>0||x.rej>0);
+  if(!mk.length){h+=`<p class="empty">Belum ada data</p>`}
+  else{h+=`<div class="tbl-wrap"><table><tr><th>Kode</th><th>Barang</th><th>Produksi (Jahit)</th><th>Packing OK</th><th>Reject</th><th>Kondisi</th><th>Stok</th></tr>`+
+    mk.map(x=>`<tr><td>${esc(x.kode)}</td><td>${esc(x.nama)}</td><td>${x.pJ}</td><td><span class="badge badge-ok">${x.pOk}</span></td><td><span class="badge badge-bad">${x.rej}</span></td><td>${esc(x.kond)}</td><td><strong>${x.stok}</strong></td></tr>`).join('')+`</table></div>`}
+  // === MK Reject Detail ===
+  const rj=pack.filter(x=>x.bad>0);
+  h+=`<hr><h4 style="color:#c62828">⚠️ MK - Barang Reject</h4>`;
+  if(!rj.length){h+=`<p class="empty">Tidak ada barang reject</p>`}
+  else{h+=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Barang</th><th>Reject</th><th>Kondisi</th><th>Keterangan</th></tr>`+
+    rj.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+      const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+      return `<tr><td>${fd(x.tgl)}</td><td>${esc(bn)}</td><td><span class="badge badge-bad">${x.bad}</span></td><td>${esc(x.kond)}</td><td>${esc(x.ket)}</td></tr>`;
+    }).join('')+`</table></div>`}
+  
+  // === Monitoring Pengiriman Paket ===
+   // paket & bar sudah dideklarasikan di atas
+  h+=`<hr><h4 style="color:#6a1b9a">🚚 Monitoring Pengiriman Paket</h4>`;
+  if(!paket.length){h+=`<p class="empty">Belum ada pengiriman</p>`}
+  else{
+    const totalPaket=paket.reduce((s,x)=>s+x.jml,0);
+    const platCount={};
+    paket.forEach(x=>{platCount[x.plat]=(platCount[x.plat]||0)+1});
+    const platInfo=Object.entries(platCount).map(([k,v])=>`<span class="badge badge-info">${esc(k)}: ${v}</span>`).join(' ');
+    h+=`<p style="font-size:.85rem;color:#666;margin-bottom:8px">Total kirim: <strong>${totalPaket} pcs</strong> | ${platInfo}</p>`;
+    h+=`<div class="tbl-wrap"><table><tr><th>Tanggal</th><th>Platform</th><th>No. Order</th><th>Barang</th><th>Jml</th><th>Resi</th><th>Ket</th></tr>`+
+      paket.sort((a,b)=>b.tgl.localeCompare(a.tgl)).map(x=>{
+        const bn=(bar.find(b=>b.k===x.bar)||{}).n||x.bar;
+        return `<tr><td>${fd(x.tgl)}</td><td><span class="badge badge-info">${esc(x.plat)}</span></td><td>${esc(x.ord)}</td><td>${esc(bn)}</td><td>${x.jml}</td><td>${esc(x.resi)}</td><td>${esc(x.ket)}</td></tr>`;
+      }).join('')+`</table></div>`;
+  }
+  el.innerHTML=h;
+}  
+function toggleStokFilter(){
+  const p=(document.getElementById('stokPeriode')||{}).value||'semua';
+  const fT=document.getElementById('filterTanggal');
+  const fB=document.getElementById('filterBulanan');
+  if(fT) fT.style.display=(p==='harian'||p==='mingguan')?'flex':'none';
+  if(fB) fB.style.display=(p==='bulanan')?'flex':'none';
+  // Set default tanggal mingguan = 7 hari lalu
+  if(p==='mingguan'){
+    const d=new Date();d.setDate(d.getDate()-7);
+    const dari=document.getElementById('stokDari');
+    if(dari&&!dari.dataset.set){dari.value=d.toISOString().slice(0,10);dari.dataset.set='1'}
+  }
+}
+function rStok(){
+  const el=document.getElementById('stokData');if(!el)return;
+  const per=(document.getElementById('stokPeriode')||{}).value||'semua';
+  const bar=ld('m_bar'),pack=ld('d_pack'),paket=ld('d_paket');
+  // Hanya barang kode B
+  const barB=bar.filter(b=>b.k.toUpperCase().startsWith('B'));
+  let packF=pack, paketF=paket, label='Semua Waktu';
+  if(per==='harian'||per==='mingguan'){
+    const dari=gv('stokDari'),sampai=gv('stokSampai');
+    if(dari&&sampai){
+      packF=pack.filter(x=>{const t=(x.tgl||'').slice(0,10);return t>=dari&&t<=sampai});
+      paketF=paket.filter(x=>{const t=(x.tgl||'').slice(0,10);return t>=dari&&t<=sampai});
+      label=fd(dari)+' s/d '+fd(sampai);
+    }
+  }else if(per==='bulanan'){
+    const bl=gv('stokBulan'),th=gv('stokTahun');
+    if(bl&&th){
+      const prefix=th+'-'+bl;
+      packF=pack.filter(x=>x.tgl&&x.tgl.startsWith(prefix));
+      paketF=paket.filter(x=>x.tgl&&x.tgl.startsWith(prefix));
+      const namaBulan=['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      label=namaBulan[+bl]+' '+th;
+    }
+  }
+  // Debug info
+  let debug=`<p style="font-size:.78rem;color:#999;margin-bottom:4px">Total packing: ${pack.length} | Terfilter: ${packF.length} | Total paket: ${paket.length} | Terfilter: ${paketF.length}</p>`;
+  const rows=barB.map(b=>{
+    const pOk=packF.filter(x=>x.bar===b.k).reduce((s,x)=>s+(x.ok||0),0);
+    const kirim=paketF.filter(x=>x.bar===b.k).reduce((s,x)=>s+x.jml,0);
+    return{kode:b.k,nama:b.n,stok:pOk-kirim};
+  }).filter(x=>x.stok!==0||per==='semua');
+  if(!rows.length){el.innerHTML=debug+'<p class="empty">Tidak ada data stok untuk periode ini</p>';return}
+  el.innerHTML=debug+`<p style="font-size:.85rem;color:#666;margin-bottom:8px">Periode: <strong>${label}</strong></p>
+    <div class="tbl-wrap"><table><tr><th>Kode</th><th>Barang</th><th>Stok</th></tr>`+
+    rows.map(x=>`<tr><td>${esc(x.kode)}</td><td>${esc(x.nama)}</td><td><strong>${x.stok}</strong></td></tr>`).join('')+
+    `</table></div>`;
+}
+
+/* ====== CALC ====== */
+function calcStok(){
+  const bar=ld('m_bar'),prod=ld('d_prod'),pack=ld('d_pack'),paket=ld('d_paket'),ker=ld('m_ker');
+  return bar.map(b=>{
+    const pP=prod.filter(p=>{const k=ker.find(x=>x.k===p.ker);return p.bar===b.k&&k&&k.n.toLowerCase().includes('jahit')}).reduce((a,x)=>a+x.jml,0);
+    const pK=pack.filter(x=>x.bar===b.k).reduce((a,x)=>a+x.ok,0);
+    const pS=paket.filter(x=>x.bar===b.k).reduce((a,x)=>a+x.jml,0);
+    return{kode:b.k,nama:b.n,prod:pP,packOk:pK,kirim:pS,stok:pK-pS};
+  });
+}
+
+/* ====== BACKUP ====== */
+function backupAll(){
+  const data={};KEYS.forEach(k=>data[k]=ld(k));
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='NaviDept_Backup_'+td()+'.json';a.click();ok('Backup berhasil!');
+}
+function restoreAll(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      for(const k of KEYS){if(data[k])await sv(k,data[k])}
+      ok('Data berhasil di-restore!');render();
+    }catch(err){alert('File tidak valid!')}
+  };
+  reader.readAsText(file);
+}
+
+/* ====== BOOT ====== */
+function boot(){
+  const role=sessionStorage.getItem('navi_role');
+  if(!role){
+    document.getElementById('loginScreen').style.display='flex';
+    document.getElementById('app').style.display='none';
+    return;
+  }
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  CUR.role=role;
+  CUR.tab=sessionStorage.getItem('navi_tab')||Object.keys(TABS[role])[0];
+  render();
+}
+
+document.getElementById('loginForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  const u=gv('user').toLowerCase(),p=gv('pass');
+  if(USERS[u]&&USERS[u].pw===p){
+    sessionStorage.setItem('navi_role',USERS[u].role);
+    sessionStorage.setItem('navi_tab','');
+    boot();
+  }else{
+    alert('Username atau Password salah!');
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click',function(){
+  sessionStorage.clear();
+  tempItems=[];
+  boot();
+});
+
+// Init localStorage
+KEYS.forEach(k=>{if(!localStorage.getItem(k))localStorage.setItem(k,'[]')});
+boot();
+</script>
+</body>
+</html>  
