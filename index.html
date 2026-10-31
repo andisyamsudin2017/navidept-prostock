@@ -212,18 +212,23 @@ async function initDB() {
         const { data, error } = await db.from('app_data').select('*');
         if (error) throw error;
         KEYS.forEach(k => { CACHE[k] = []; });
+        let detail = [];
         (data || []).forEach(row => {
-            if (KEYS.includes(row.key)) CACHE[row.key] = row.data || [];
+            if (KEYS.includes(row.key)) {
+                const arr = Array.isArray(row.data) ? row.data : [];
+                CACHE[row.key] = arr;
+                if (arr.length > 0) detail.push(row.key + '=' + arr.length);
+            }
         });
-        console.log('✅ Data dimuat dari cloud');
+        const msg = detail.length > 0 ? detail.join(', ') : 'semua kosong';
+        alert('📦 Data cloud: ' + msg);
+        console.log('CACHE setelah initDB:', JSON.stringify(CACHE));
     } catch (e) {
-        console.error('❌ Gagal muat data:', e);
-        alert('Gagal terhubung ke database!\n\nError: ' + e.message +
-              '\n\nPastikan URL & Key Supabase sudah benar di dalam kode.');
+        alert('❌ Gagal muat: ' + e.message);
+        console.error('initDB error:', e);
     }
     showLoading(false);
 }
-
 function setupRealtime() {
     if (realtimeChannel) db.removeChannel(realtimeChannel);
     realtimeChannel = db.channel('navidept_sync')
